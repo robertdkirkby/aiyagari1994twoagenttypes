@@ -1,0 +1,580 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>Aiyagari1994_TwoAgentTypes_v2</title><meta name="generator" content="MATLAB 9.4"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2020-11-04"><meta name="DC.source" content="Aiyagari1994_TwoAgentTypes_v2.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h2>Contents</h2><div><ul><li><a href="#2">Different permanent types of agents</a></li><li><a href="#4">Declare the model parameters (keep them all in a structure Params)</a></li><li><a href="#5">Set up the exogenous shock process</a></li><li><a href="#6">Grids</a></li><li><a href="#7">Solving the value function problem</a></li><li><a href="#8">Solving for the stationary distribution</a></li><li><a href="#9">Solve for the General Equilibrium</a></li><li><a href="#10">Now that we have the GE, let's calculate a bunch of related objects</a></li><li><a href="#11">Display some output about the solution</a></li></ul></div><pre class="codeinput"><span class="comment">% Example based on Aiyagari (1994) that shows how to have two 'permanent types' of agents.</span>
+<span class="comment">%</span>
+<span class="comment">% Before looking at this you should be familiar with how to solve the model</span>
+<span class="comment">% of Aiyagari (1994). In this example I extend the model to allow for two</span>
+<span class="comment">% types of agents who have different discount factors: the parameter beta (they could in</span>
+<span class="comment">% principle differ in just about anything).</span>
+<span class="comment">% This is the second (v2) of two examples that do this. In this example the</span>
+<span class="comment">% different types of agents are set up by giving them 'names' and making the</span>
+<span class="comment">% parameter beta take different values for the different names (by making beta</span>
+<span class="comment">% what matlab calls a 'structure' instead of just a scalar number).</span>
+<span class="comment">% In the first (v1) example the exact same model was solved but instead the</span>
+<span class="comment">% different types of agents were set up as a vector for the discount factor</span>
+<span class="comment">% parameter beta.</span>
+<span class="comment">%</span>
+<span class="comment">% Essentially three changes have to be introduced to the setup: Names_i,</span>
+<span class="comment">% which gives the names of the permanent types to be used. The change to the</span>
+<span class="comment">% actual parameter values for beta. The 'weight' or 'fraction' of agents of</span>
+<span class="comment">% each type (below called PTypeWeights, and PTypeDistNames).</span>
+<span class="comment">%</span>
+<span class="comment">% A quick comment on v1 (vector) versus v2 (names) approaches. While both</span>
+<span class="comment">% can in principle do exactly the same thing, if you have lots of different</span>
+<span class="comment">% types of agents, who differ in just one or two respects (e.g., ten types or one</span>
+<span class="comment">% hundred types, but only difference is their risk aversion parameter and their</span>
+<span class="comment">% Frisch elasticity of labour supply) then you will want to use the v1</span>
+<span class="comment">% (vector) approach. If you have just a small number of agent types, but</span>
+<span class="comment">% they are genuinely different (e.g., one is a finite lived household and</span>
+<span class="comment">% the other an infinitely lived firm, or three household types representing</span>
+<span class="comment">% single males, single females, and married couples) then you will want to</span>
+<span class="comment">% use the v2 (structure) approach.</span>
+<span class="comment">%</span>
+<span class="comment">% As will be seen, other than having to be explicit about the changes when</span>
+<span class="comment">% setting up solving a model with multiple 'permanent types' of agents using the VFI</span>
+<span class="comment">% Toolkit is no more difficult that the model with just one type.</span>
+<span class="comment">% It is worth mentioning that 'permanent types' is not the same thing as</span>
+<span class="comment">% the standard econometrics concepts of 'permanent shocks' (as in unit root</span>
+<span class="comment">% models in time series) and it is not the same thing as fixed effects in</span>
+<span class="comment">% panel data econometrics (although you might think of it as a more</span>
+<span class="comment">% sophisticated version of this; agents differ in a permanent way, but with</span>
+<span class="comment">% fixed effects that must play out exactly the same every time period,</span>
+<span class="comment">% while here 'permanent types' can play out in ways that lead to behaviour</span>
+<span class="comment">% that in reduced form will appear to change over time.</span>
+<span class="comment">%</span>
+<span class="comment">% Other than allowing for two different 'permanent types' of agents this</span>
+<span class="comment">% code does exactly the same as the standard example code for the Aiyagari</span>
+<span class="comment">% (1994) model: https://github.com/vfitoolkit/VFItoolkit-matlab-examples/tree/master/HeterogeneousAgentModels</span>
+<span class="comment">% That is, these codes set up and solve the Aiyagari (1994) model for a given</span>
+<span class="comment">% parametrization. After solving the model they then show how some of the</span>
+<span class="comment">% vfitoolkit commands to easily calculate things like the Gini coefficient</span>
+<span class="comment">% for income, and how to plot the distribution of asset holdings.</span>
+</pre><h2 id="2">Different permanent types of agents</h2><pre class="codeinput">Names_i={<span class="string">'impatient'</span>, <span class="string">'patient'</span>}; <span class="comment">% There are two permanent types of agents.</span>
+<span class="comment">% The other thing we will need to do is specify the different values of the parameter beta below.</span>
+<span class="comment">% Other than this the only notable changes are that this information needs</span>
+<span class="comment">% to be passed as an additional input to a number of the VFI Toolkit commands.</span>
+<span class="comment">% Note: You just pass Names_i as an input in exact same way you would pass</span>
+<span class="comment">% N_i in the v1 (vector) approach to permanent types of agents. The VFI</span>
+<span class="comment">% Toolkit automatically recognises which of the two you are using based on</span>
+<span class="comment">% contents of N_i or Names_i.</span>
+</pre><p>Grid sizes, have declared at beginning for convenience.</p><pre class="codeinput">n_k=2^9;
+n_l=21;
+n_r=0; <span class="comment">% Normally you will want n_p=0, setting a non-zero value here activates the use of a grid on prices.</span>
+</pre><h2 id="4">Declare the model parameters (keep them all in a structure Params)</h2><pre class="codeinput"><span class="comment">% Our two permanent types of agents differ in their values of beta. In v2</span>
+<span class="comment">% of this we set this up using a structure for beta. Nice thing is you can</span>
+<span class="comment">% just refer to agents by their names.</span>
+Params.beta.impatient=0.94; <span class="comment">% Discount factor for 'impatient' type of agent.</span>
+Params.beta.patient=0.98; <span class="comment">% Discount factor for 'patient' type of agent.</span>
+
+Params.alpha=0.36; <span class="comment">% Capital share in Cobb-Douglas Production function</span>
+Params.delta=0.08; <span class="comment">% Depreciation rate of capital</span>
+Params.mu=3; <span class="comment">% CRRA parameter in utility function</span>
+Params.rho=0.6; <span class="comment">% Autocorrelation of z</span>
+Params.sigma=0.2; <span class="comment">% Std dev. of shocks to z</span>
+
+<span class="comment">%Set initial value for interest rates (Aiyagari proves that with idiosyncratic</span>
+<span class="comment">%uncertainty, the eqm interest rate is limited above by it's steady state value</span>
+<span class="comment">%without idiosyncratic uncertainty, that is that r&lt;r_ss).</span>
+Params.r=0.02;
+
+Params.q=3; <span class="comment">%Footnote 33 of Aiyagari(1993WP, pg 25) implicitly says that he uses q=3</span>
+</pre><h2 id="5">Set up the exogenous shock process</h2><p>Create markov process for the exogenous labour productivity, l.</p><pre class="codeinput">[l_grid, pi_l]=TauchenMethod(0,(Params.sigma^2)*(1-Params.rho^2),Params.rho,n_l,Params.q);
+l_grid=exp(l_grid);
+<span class="comment">% % Get some info on the markov process</span>
+[Expectation_l,~,~,~]=MarkovChainMoments(l_grid,pi_l); <span class="comment">%Since z is exogenous, this will be it's eqm value</span>
+l_grid=l_grid./Expectation_l;
+</pre><h2 id="6">Grids</h2><pre class="codeinput"><span class="comment">% In the absence of idiosyncratic risk, the steady state equilibrium is given by</span>
+r_ss=1/Params.beta.patient-1;
+K_ss=((r_ss+Params.delta)/Params.alpha)^(1/(Params.alpha-1)); <span class="comment">%The steady state capital in the absence of aggregate uncertainty.</span>
+Params.kmax=15*K_ss;
+
+<span class="comment">% Set grid for asset holdings</span>
+k_grid=exp(linspace(0,log(Params.kmax+1),n_k))'-1;
+<span class="comment">% nk1=floor(n_k/3); nk2=floor(n_k/3); nk3=n_k-nk1-nk2;</span>
+<span class="comment">% k_grid=sort([linspace(0,K_ss,nk1),linspace(K_ss+0.0001,3*K_ss,nk2),linspace(3*K_ss+0.0001,15*K_ss,nk3)]');</span>
+
+<span class="comment">% Bring model into the notational conventions used by the toolkit</span>
+<span class="comment">% To simplify this example I have used the (a,z) notation of the VFI</span>
+<span class="comment">% Toolkit directly.</span>
+n_d=0;
+d_grid=0; <span class="comment">%There is no d variable</span>
+n_a=n_k;
+a_grid=k_grid;
+n_z=n_l;
+z_grid=l_grid;
+pi_z=pi_l;
+n_p=n_r;
+</pre><h2 id="7">Solving the value function problem</h2><pre class="codeinput">DiscountFactorParamNames={<span class="string">'beta'</span>};
+
+ReturnFn=@(aprime_val, a_val, z_val,alpha,delta,mu,r) Aiyagari1994_ReturnFn(aprime_val, a_val, z_val,alpha,delta,mu,r);
+ReturnFnParamNames={<span class="string">'alpha'</span>,<span class="string">'delta'</span>,<span class="string">'mu'</span>,<span class="string">'r'</span>}; <span class="comment">%It is important that these are in same order as they appear in 'Aiyagari1994_ReturnFn'</span>
+
+<span class="comment">% Following lines are used to test that we are setting things up correctly, but is not needed at this stage.</span>
+vfoptions.verbose=1;
+disp(<span class="string">'Test ValueFnIter'</span>)
+tic;
+[V, Policy]=ValueFnIter_PType(n_d,n_a,n_z,[],Names_i,d_grid, a_grid, z_grid, pi_z, [], [], ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, [], vfoptions); <span class="comment">% The unused inputs related to the possibility that some agents are what VFI Toolkit calls 'Case2' (following nomenclature of SLP1989)</span>
+toc
+
+<span class="comment">% Graph the two different value functions and the two different policy functions.</span>
+<span class="comment">% Note that these are the example/test ones, not the ones in equilibrium.</span>
+figure(1)
+subplot(2,2,1); surf(V.impatient) <span class="comment">% NOTE: notice that relative to v1, this is now 'by name' rather than the generic pt1 and pt2</span>
+title(<span class="string">'Value fn: Type 1, low beta'</span>)
+subplot(2,2,2); surf(V.patient)
+title(<span class="string">'Value fn: Type 2, high beta'</span>)
+subplot(2,2,3); surf(a_grid(shiftdim(Policy.impatient,1)))
+title(<span class="string">'Policy fn (next period assets): Type 1, low beta'</span>)
+subplot(2,2,4); surf(a_grid(shiftdim(Policy.patient,1)))
+title(<span class="string">'Policy fn (next period assets): Type 2, high beta'</span>)
+</pre><img vspace="5" hspace="5" src="Aiyagari1994_TwoAgentTypes_v2_01.png" alt=""> <h2 id="8">Solving for the stationary distribution</h2><pre class="codeinput">Params.PTypeWeights=[0.6; 0.4]; <span class="comment">% Make 60% of agents the 'low beta' type and 40% the 'high beta' type.</span>
+PTypeDistNames={<span class="string">'PTypeWeights'</span>};
+
+<span class="comment">% Following lines are used to test that we are setting things up correctly, but is not needed at this stage.</span>
+simoptions=struct();
+disp(<span class="string">'Test StationaryDist'</span>)
+tic;
+StationaryDist=StationaryDist_PType([],[],Policy,n_d,n_a,n_z,[],Names_i,d_grid, a_grid, z_grid,pi_z,[],[],Params,[],PTypeDistNames,simoptions);
+toc
+
+<span class="comment">% Graph the cumulative distribution function over asset holdings.</span>
+<span class="comment">% Note that these are the example/test ones, not the ones in equilibrium.</span>
+figure(2)
+plot(a_grid,cumsum(sum(StationaryDist.impatient,2))*StationaryDist.ptweights(1))
+hold <span class="string">on</span>
+plot(a_grid,cumsum(sum(StationaryDist.patient,2))*StationaryDist.ptweights(2))
+hold <span class="string">off</span>
+legend(<span class="string">'Type 1: Low beta'</span>, <span class="string">'Type 2: High beta'</span>)
+title(<span class="string">'Agent Stationary Distribution: cdfs by type'</span>)
+</pre><img vspace="5" hspace="5" src="Aiyagari1994_TwoAgentTypes_v2_02.png" alt=""> <h2 id="9">Solve for the General Equilibrium</h2><pre class="codeinput"><span class="comment">% Create descriptions of aggregate values as functions of d_grid, a_grid, z_grid</span>
+<span class="comment">% (used to calculate the integral across the stationary dist fn of whatever functions you define here)</span>
+FnsToEvaluateParamNames.Names={};
+FnsToEvaluate_1 = @(aprime,a,z) a; <span class="comment">%We just want the aggregate assets (which is this periods state)</span>
+<span class="comment">% Note that by default this will be evaluated for all types of agents.</span>
+FnsToEvaluate={FnsToEvaluate_1};
+
+<span class="comment">% Following line could be used to test that we are setting things up correctly, but is not needed at this stage.</span>
+AggVars=EvalFnOnAgentDist_AggVars_PType(StationaryDist, Policy,n_d,n_a,n_z,[],Names_i,d_grid, a_grid, z_grid,[], FnsToEvaluate, Params, FnsToEvaluateParamNames, [], []);
+
+<span class="comment">%Now define the functions for the General Equilibrium conditions</span>
+    <span class="comment">%Should be written as LHS of general equilibrium eqn minus RHS, so that</span>
+    <span class="comment">%the closer the value given by the function is to zero, the closer</span>
+    <span class="comment">%the general equilibrium condition is to holding.</span>
+<span class="comment">% Note AggVars contains the expected values over the stationary agent</span>
+<span class="comment">% distribution of the FnsToEvaluate</span>
+GeneralEqmEqnsParamNames(1).Names={<span class="string">'alpha'</span>,<span class="string">'delta'</span>};
+GeneralEqmEqn_1 = @(AggVars,GEprices,alpha,delta) GEprices-(alpha*(AggVars^(alpha-1))*(Expectation_l^(1-alpha))-delta); <span class="comment">%The requirement that the interest rate corresponds to the agg capital level</span>
+GeneralEqmEqns={GeneralEqmEqn_1};
+
+<span class="comment">%Use the toolkit to find the equilibrium price index</span>
+GEPriceParamNames={<span class="string">'r'</span>};
+heteroagentoptions.verbose=1;
+disp(<span class="string">'Calculating price vector corresponding to the stationary eqm'</span>)
+[p_eqm,p_eqm_index,GeneralEqmConditions]=HeteroAgentStationaryEqm_PType(n_d, n_a, n_z, [], Names_i, 0, pi_z, d_grid, a_grid, z_grid,[], [], [], ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, [], [], PTypeDistNames, FnsToEvaluateParamNames, GeneralEqmEqnsParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
+
+<span class="comment">% The three output are the general equilibrium price, the index for the</span>
+<span class="comment">% price in the price grid (that option is unused here), and the value of</span>
+<span class="comment">% the General equilibrium conditions in equilibrium (note that they should</span>
+<span class="comment">% be zero, or in practice say of the order of 10^(-3) or 10^(-5)).</span>
+p_eqm
+</pre><pre class="codeoutput">Calculating price vector corresponding to the stationary eqm
+p_eqm = 
+
+  struct with fields:
+
+    r: 0.0202
+
+</pre><h2 id="10">Now that we have the GE, let's calculate a bunch of related objects</h2><pre class="codeinput"><span class="comment">% Equilibrium wage</span>
+Params.w=(1-Params.alpha)*((p_eqm.r+Params.delta)/Params.alpha)^(Params.alpha/(Params.alpha-1));
+
+disp(<span class="string">'Calculating various equilibrium objects'</span>)
+Params.r=p_eqm.r;
+[V, Policy]=ValueFnIter_PType(n_d,n_a,n_z,[],Names_i,d_grid, a_grid, z_grid, pi_z, [], [], ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, [], vfoptions); <span class="comment">% The unused inputs related to the possibility that some agents are what VFI Toolkit calls 'Case2' (following nomenclature of SLP1989)</span>
+
+<span class="comment">% By default Policy contains the indexes corresponding to the optimal</span>
+<span class="comment">% policy. Can get the policy values using vfoptions.polindorval=1 or,</span>
+<span class="comment">% PolicyValues=PolicyInd2Val_Case1(Policy,n_d,n_a,n_z,d_grid,a_grid, Parallel);</span>
+
+StationaryDist=StationaryDist_PType([],[],Policy,n_d,n_a,n_z,[],Names_i,d_grid, a_grid, z_grid,pi_z,[],[],Params,[],PTypeDistNames,simoptions);
+
+AggregateVars=EvalFnOnAgentDist_AggVars_PType(StationaryDist, Policy,n_d,n_a,n_z,[],Names_i,d_grid, a_grid, z_grid,[], FnsToEvaluate, Params, FnsToEvaluateParamNames, [], []);
+
+<span class="comment">% Calculate savings rate:</span>
+<span class="comment">% We know production is Y=K^{\alpha}L^{1-\alpha}, and that L=1</span>
+<span class="comment">% (exogeneous). Thus Y=K^{\alpha}.</span>
+<span class="comment">% In equilibrium K is constant, so aggregate savings is just depreciation, which</span>
+<span class="comment">% equals delta*K. The agg savings rate is thus delta*K/Y.</span>
+<span class="comment">% So agg savings rate is given by s=delta*K/(K^{\alpha})=delta*K^{1-\alpha}</span>
+aggsavingsrate=Params.delta*AggregateVars^(1-Params.alpha);
+
+<span class="comment">% Calculate Lorenz curves, Gini coefficients, and Pareto tail coefficients</span>
+<span class="comment">%  @(d_val,aprime_val,a_val,s_val,pi_z,p_val,param)</span>
+FnsToEvaluateParamNames(1).Names={<span class="string">'w'</span>};
+FnsToEvaluate_Earnings = @(aprime_val,a_val,z_val,w) w*z_val;
+FnsToEvaluateParamNames(2).Names={<span class="string">'w'</span>,<span class="string">'r'</span>};
+FnsToEvaluate_Income = @(aprime_val,a_val,z_val,w,r) w*z_val+(1+r)*a_val;
+FnsToEvaluateParamNames(3).Names={};
+FnsToEvaluate_Wealth = @(aprime_val,a_val,z_val) a_val;
+FnsToEvaluateIneq={FnsToEvaluate_Earnings, FnsToEvaluate_Income, FnsToEvaluate_Wealth};
+LorenzCurves=EvalFnOnAgentDist_LorenzCurve_PType(StationaryDist, Policy,n_d,n_a,n_z,[],Names_i,d_grid, a_grid, z_grid,[], FnsToEvaluateIneq, Params, FnsToEvaluateParamNames);
+
+<span class="comment">% % 3.5 The Distributions of Earnings and Wealth</span>
+<span class="comment">% %  Gini for Earnings</span>
+EarningsGini=Gini_from_LorenzCurve(LorenzCurves(1,:));
+IncomeGini=Gini_from_LorenzCurve(LorenzCurves(2,:));
+WealthGini=Gini_from_LorenzCurve(LorenzCurves(3,:));
+
+<span class="comment">% % Calculate inverted Pareto coeff, b, from the top income shares as b=1/[log(S1%/S0.1%)/log(10)] (formula taken from Excel download of WTID database)</span>
+<span class="comment">% % No longer used: Calculate Pareto coeff from Gini as alpha=(1+1/G)/2; ( http://en.wikipedia.org/wiki/Pareto_distribution#Lorenz_curve_and_Gini_coefficient)</span>
+<span class="comment">% % Recalculte Lorenz curves, now with 1000 points</span>
+LorenzCurves=EvalFnOnAgentDist_LorenzCurve_PType(StationaryDist, Policy,n_d,n_a,n_z,[],Names_i,d_grid, a_grid, z_grid,[], FnsToEvaluateIneq, Params, FnsToEvaluateParamNames, [],[],[],1000);
+EarningsParetoCoeff=1/((log(LorenzCurves(1,990))/log(LorenzCurves(1,999)))/log(10)); <span class="comment">%(1+1/EarningsGini)/2;</span>
+IncomeParetoCoeff=1/((log(LorenzCurves(2,990))/log(LorenzCurves(2,999)))/log(10)); <span class="comment">%(1+1/IncomeGini)/2;</span>
+WealthParetoCoeff=1/((log(LorenzCurves(3,990))/log(LorenzCurves(3,999)))/log(10)); <span class="comment">%(1+1/WealthGini)/2;</span>
+</pre><pre class="codeoutput">Calculating various equilibrium objects
+
+<h2 id="11">Display some output about the solution</h2><pre class="codeinput">figure(3)
+plot(a_grid,cumsum(sum(StationaryDist.ptweights(1)*StationaryDist.impatient,2)+sum(StationaryDist.ptweights(2)*StationaryDist.patient,2))) <span class="comment">%Plot the asset cdf</span>
+title(<span class="string">'Cumulative distribution of asset holdings'</span>)
+
+fprintf(<span class="string">'For parameter values sigma=%.2f, mu=%.2f, rho=%.2f \n'</span>, [Params.sigma,Params.mu,Params.rho])
+
+fprintf(<span class="string">'The equilibrium value of the interest rate is r=%.4f \n'</span>, p_eqm.r*100)
+fprintf(<span class="string">'The equilibrium value of the aggregate savings rate is s=%.4f \n'</span>, aggsavingsrate)
+<span class="comment">%fprintf('Time required to find the eqm was %.4f seconds \n',findeqmtime)</span>
+</pre><pre class="codeoutput">For parameter values sigma=0.20, mu=3.00, rho=0.60 
+The equilibrium value of the interest rate is r=2.0188 
+The equilibrium value of the aggregate savings rate is s=0.2915 
+</pre><img vspace="5" hspace="5" src="Aiyagari1994_TwoAgentTypes_v2_03.png" alt=""> <p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2018a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+% Example based on Aiyagari (1994) that shows how to have two 'permanent types' of agents. 
+%
+% Before looking at this you should be familiar with how to solve the model
+% of Aiyagari (1994). In this example I extend the model to allow for two
+% types of agents who have different discount factors: the parameter beta (they could in
+% principle differ in just about anything).
+% This is the second (v2) of two examples that do this. In this example the 
+% different types of agents are set up by giving them 'names' and making the 
+% parameter beta take different values for the different names (by making beta 
+% what matlab calls a 'structure' instead of just a scalar number).
+% In the first (v1) example the exact same model was solved but instead the
+% different types of agents were set up as a vector for the discount factor
+% parameter beta.
+%
+% Essentially three changes have to be introduced to the setup: Names_i,
+% which gives the names of the permanent types to be used. The change to the 
+% actual parameter values for beta. The 'weight' or 'fraction' of agents of 
+% each type (below called PTypeWeights, and PTypeDistNames).
+%
+% A quick comment on v1 (vector) versus v2 (names) approaches. While both
+% can in principle do exactly the same thing, if you have lots of different
+% types of agents, who differ in just one or two respects (e.g., ten types or one
+% hundred types, but only difference is their risk aversion parameter and their
+% Frisch elasticity of labour supply) then you will want to use the v1
+% (vector) approach. If you have just a small number of agent types, but
+% they are genuinely different (e.g., one is a finite lived household and
+% the other an infinitely lived firm, or three household types representing
+% single males, single females, and married couples) then you will want to
+% use the v2 (structure) approach.
+%
+% As will be seen, other than having to be explicit about the changes when
+% setting up solving a model with multiple 'permanent types' of agents using the VFI
+% Toolkit is no more difficult that the model with just one type.
+% It is worth mentioning that 'permanent types' is not the same thing as
+% the standard econometrics concepts of 'permanent shocks' (as in unit root
+% models in time series) and it is not the same thing as fixed effects in
+% panel data econometrics (although you might think of it as a more
+% sophisticated version of this; agents differ in a permanent way, but with
+% fixed effects that must play out exactly the same every time period,
+% while here 'permanent types' can play out in ways that lead to behaviour
+% that in reduced form will appear to change over time.
+%
+% Other than allowing for two different 'permanent types' of agents this
+% code does exactly the same as the standard example code for the Aiyagari
+% (1994) model: https://github.com/vfitoolkit/VFItoolkit-matlab-examples/tree/master/HeterogeneousAgentModels
+% That is, these codes set up and solve the Aiyagari (1994) model for a given
+% parametrization. After solving the model they then show how some of the
+% vfitoolkit commands to easily calculate things like the Gini coefficient
+% for income, and how to plot the distribution of asset holdings.
+
+%% Different permanent types of agents
+Names_i={'impatient', 'patient'}; % There are two permanent types of agents.
+% The other thing we will need to do is specify the different values of the parameter beta below.
+% Other than this the only notable changes are that this information needs
+% to be passed as an additional input to a number of the VFI Toolkit commands.
+% Note: You just pass Names_i as an input in exact same way you would pass
+% N_i in the v1 (vector) approach to permanent types of agents. The VFI
+% Toolkit automatically recognises which of the two you are using based on
+% contents of N_i or Names_i.
+
+%%
+% Grid sizes, have declared at beginning for convenience.
+n_k=2^9;
+n_l=21;
+n_r=0; % Normally you will want n_p=0, setting a non-zero value here activates the use of a grid on prices.
+
+%% Declare the model parameters (keep them all in a structure Params)
+
+% Our two permanent types of agents differ in their values of beta. In v2
+% of this we set this up using a structure for beta. Nice thing is you can
+% just refer to agents by their names.
+Params.beta.impatient=0.94; % Discount factor for 'impatient' type of agent.
+Params.beta.patient=0.98; % Discount factor for 'patient' type of agent.
+
+Params.alpha=0.36; % Capital share in Cobb-Douglas Production function
+Params.delta=0.08; % Depreciation rate of capital
+Params.mu=3; % CRRA parameter in utility function
+Params.rho=0.6; % Autocorrelation of z
+Params.sigma=0.2; % Std dev. of shocks to z
+
+%Set initial value for interest rates (Aiyagari proves that with idiosyncratic
+%uncertainty, the eqm interest rate is limited above by it's steady state value
+%without idiosyncratic uncertainty, that is that r<r_ss).
+Params.r=0.02;
+
+Params.q=3; %Footnote 33 of Aiyagari(1993WP, pg 25) implicitly says that he uses q=3
+
+%% Set up the exogenous shock process
+% Create markov process for the exogenous labour productivity, l.
+[l_grid, pi_l]=TauchenMethod(0,(Params.sigma^2)*(1-Params.rho^2),Params.rho,n_l,Params.q); 
+l_grid=exp(l_grid);
+% % Get some info on the markov process
+[Expectation_l,~,~,~]=MarkovChainMoments(l_grid,pi_l); %Since z is exogenous, this will be it's eqm value 
+l_grid=l_grid./Expectation_l;
+
+%% Grids
+
+% In the absence of idiosyncratic risk, the steady state equilibrium is given by
+r_ss=1/Params.beta.patient-1;
+K_ss=((r_ss+Params.delta)/Params.alpha)^(1/(Params.alpha-1)); %The steady state capital in the absence of aggregate uncertainty.
+Params.kmax=15*K_ss;
+
+% Set grid for asset holdings
+k_grid=exp(linspace(0,log(Params.kmax+1),n_k))'-1;
+% nk1=floor(n_k/3); nk2=floor(n_k/3); nk3=n_k-nk1-nk2;
+% k_grid=sort([linspace(0,K_ss,nk1),linspace(K_ss+0.0001,3*K_ss,nk2),linspace(3*K_ss+0.0001,15*K_ss,nk3)]');
+
+% Bring model into the notational conventions used by the toolkit
+% To simplify this example I have used the (a,z) notation of the VFI
+% Toolkit directly.
+n_d=0;
+d_grid=0; %There is no d variable
+n_a=n_k;
+a_grid=k_grid;
+n_z=n_l;
+z_grid=l_grid;
+pi_z=pi_l;
+n_p=n_r;
+
+%% Solving the value function problem
+DiscountFactorParamNames={'beta'};
+
+ReturnFn=@(aprime_val, a_val, z_val,alpha,delta,mu,r) Aiyagari1994_ReturnFn(aprime_val, a_val, z_val,alpha,delta,mu,r);
+ReturnFnParamNames={'alpha','delta','mu','r'}; %It is important that these are in same order as they appear in 'Aiyagari1994_ReturnFn'
+
+% Following lines are used to test that we are setting things up correctly, but is not needed at this stage.
+vfoptions.verbose=1;
+disp('Test ValueFnIter')
+tic;
+[V, Policy]=ValueFnIter_PType(n_d,n_a,n_z,[],Names_i,d_grid, a_grid, z_grid, pi_z, [], [], ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, [], vfoptions); % The unused inputs related to the possibility that some agents are what VFI Toolkit calls 'Case2' (following nomenclature of SLP1989)
+toc
+
+% Graph the two different value functions and the two different policy functions.
+% Note that these are the example/test ones, not the ones in equilibrium.
+figure(1)
+subplot(2,2,1); surf(V.impatient) % NOTE: notice that relative to v1, this is now 'by name' rather than the generic pt1 and pt2
+title('Value fn: Type 1, low beta')
+subplot(2,2,2); surf(V.patient)
+title('Value fn: Type 2, high beta')
+subplot(2,2,3); surf(a_grid(shiftdim(Policy.impatient,1)))
+title('Policy fn (next period assets): Type 1, low beta')
+subplot(2,2,4); surf(a_grid(shiftdim(Policy.patient,1)))
+title('Policy fn (next period assets): Type 2, high beta')
+
+%% Solving for the stationary distribution
+Params.PTypeWeights=[0.6; 0.4]; % Make 60% of agents the 'low beta' type and 40% the 'high beta' type.
+PTypeDistNames={'PTypeWeights'};
+
+% Following lines are used to test that we are setting things up correctly, but is not needed at this stage.
+simoptions=struct();
+disp('Test StationaryDist')
+tic;
+StationaryDist=StationaryDist_PType([],[],Policy,n_d,n_a,n_z,[],Names_i,d_grid, a_grid, z_grid,pi_z,[],[],Params,[],PTypeDistNames,simoptions);
+toc
+
+% Graph the cumulative distribution function over asset holdings.
+% Note that these are the example/test ones, not the ones in equilibrium.
+figure(2)
+plot(a_grid,cumsum(sum(StationaryDist.impatient,2))*StationaryDist.ptweights(1))
+hold on
+plot(a_grid,cumsum(sum(StationaryDist.patient,2))*StationaryDist.ptweights(2))
+hold off
+legend('Type 1: Low beta', 'Type 2: High beta')
+title('Agent Stationary Distribution: cdfs by type')
+
+%% Solve for the General Equilibrium
+
+% Create descriptions of aggregate values as functions of d_grid, a_grid, z_grid 
+% (used to calculate the integral across the stationary dist fn of whatever functions you define here)
+FnsToEvaluateParamNames.Names={};
+FnsToEvaluate_1 = @(aprime,a,z) a; %We just want the aggregate assets (which is this periods state)
+% Note that by default this will be evaluated for all types of agents.
+FnsToEvaluate={FnsToEvaluate_1};
+
+% Following line could be used to test that we are setting things up correctly, but is not needed at this stage.
+AggVars=EvalFnOnAgentDist_AggVars_PType(StationaryDist, Policy,n_d,n_a,n_z,[],Names_i,d_grid, a_grid, z_grid,[], FnsToEvaluate, Params, FnsToEvaluateParamNames, [], []);
+
+%Now define the functions for the General Equilibrium conditions
+    %Should be written as LHS of general equilibrium eqn minus RHS, so that 
+    %the closer the value given by the function is to zero, the closer 
+    %the general equilibrium condition is to holding.
+% Note AggVars contains the expected values over the stationary agent
+% distribution of the FnsToEvaluate
+GeneralEqmEqnsParamNames(1).Names={'alpha','delta'};
+GeneralEqmEqn_1 = @(AggVars,GEprices,alpha,delta) GEprices-(alpha*(AggVars^(alpha-1))*(Expectation_l^(1-alpha))-delta); %The requirement that the interest rate corresponds to the agg capital level
+GeneralEqmEqns={GeneralEqmEqn_1};
+
+%Use the toolkit to find the equilibrium price index
+GEPriceParamNames={'r'};
+heteroagentoptions.verbose=1;
+disp('Calculating price vector corresponding to the stationary eqm')
+[p_eqm,p_eqm_index,GeneralEqmConditions]=HeteroAgentStationaryEqm_PType(n_d, n_a, n_z, [], Names_i, 0, pi_z, d_grid, a_grid, z_grid,[], [], [], ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, [], [], PTypeDistNames, FnsToEvaluateParamNames, GeneralEqmEqnsParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
+
+% The three output are the general equilibrium price, the index for the
+% price in the price grid (that option is unused here), and the value of
+% the General equilibrium conditions in equilibrium (note that they should
+% be zero, or in practice say of the order of 10^(-3) or 10^(-5)).
+p_eqm
+
+%% Now that we have the GE, let's calculate a bunch of related objects
+
+% Equilibrium wage
+Params.w=(1-Params.alpha)*((p_eqm.r+Params.delta)/Params.alpha)^(Params.alpha/(Params.alpha-1));
+
+disp('Calculating various equilibrium objects')
+Params.r=p_eqm.r;
+[V, Policy]=ValueFnIter_PType(n_d,n_a,n_z,[],Names_i,d_grid, a_grid, z_grid, pi_z, [], [], ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, [], vfoptions); % The unused inputs related to the possibility that some agents are what VFI Toolkit calls 'Case2' (following nomenclature of SLP1989)
+
+% By default Policy contains the indexes corresponding to the optimal
+% policy. Can get the policy values using vfoptions.polindorval=1 or,
+% PolicyValues=PolicyInd2Val_Case1(Policy,n_d,n_a,n_z,d_grid,a_grid, Parallel);
+
+StationaryDist=StationaryDist_PType([],[],Policy,n_d,n_a,n_z,[],Names_i,d_grid, a_grid, z_grid,pi_z,[],[],Params,[],PTypeDistNames,simoptions);
+
+AggregateVars=EvalFnOnAgentDist_AggVars_PType(StationaryDist, Policy,n_d,n_a,n_z,[],Names_i,d_grid, a_grid, z_grid,[], FnsToEvaluate, Params, FnsToEvaluateParamNames, [], []);
+
+% Calculate savings rate:
+% We know production is Y=K^{\alpha}L^{1-\alpha}, and that L=1
+% (exogeneous). Thus Y=K^{\alpha}.
+% In equilibrium K is constant, so aggregate savings is just depreciation, which
+% equals delta*K. The agg savings rate is thus delta*K/Y.
+% So agg savings rate is given by s=delta*K/(K^{\alpha})=delta*K^{1-\alpha}
+aggsavingsrate=Params.delta*AggregateVars^(1-Params.alpha);
+
+% Calculate Lorenz curves, Gini coefficients, and Pareto tail coefficients
+%  @(d_val,aprime_val,a_val,s_val,pi_z,p_val,param)
+FnsToEvaluateParamNames(1).Names={'w'};
+FnsToEvaluate_Earnings = @(aprime_val,a_val,z_val,w) w*z_val;
+FnsToEvaluateParamNames(2).Names={'w','r'};
+FnsToEvaluate_Income = @(aprime_val,a_val,z_val,w,r) w*z_val+(1+r)*a_val;
+FnsToEvaluateParamNames(3).Names={};
+FnsToEvaluate_Wealth = @(aprime_val,a_val,z_val) a_val;
+FnsToEvaluateIneq={FnsToEvaluate_Earnings, FnsToEvaluate_Income, FnsToEvaluate_Wealth};
+LorenzCurves=EvalFnOnAgentDist_LorenzCurve_PType(StationaryDist, Policy,n_d,n_a,n_z,[],Names_i,d_grid, a_grid, z_grid,[], FnsToEvaluateIneq, Params, FnsToEvaluateParamNames);
+
+% % 3.5 The Distributions of Earnings and Wealth
+% %  Gini for Earnings
+EarningsGini=Gini_from_LorenzCurve(LorenzCurves(1,:));
+IncomeGini=Gini_from_LorenzCurve(LorenzCurves(2,:));
+WealthGini=Gini_from_LorenzCurve(LorenzCurves(3,:));
+
+% % Calculate inverted Pareto coeff, b, from the top income shares as b=1/[log(S1%/S0.1%)/log(10)] (formula taken from Excel download of WTID database)
+% % No longer used: Calculate Pareto coeff from Gini as alpha=(1+1/G)/2; ( http://en.wikipedia.org/wiki/Pareto_distribution#Lorenz_curve_and_Gini_coefficient)
+% % Recalculte Lorenz curves, now with 1000 points
+LorenzCurves=EvalFnOnAgentDist_LorenzCurve_PType(StationaryDist, Policy,n_d,n_a,n_z,[],Names_i,d_grid, a_grid, z_grid,[], FnsToEvaluateIneq, Params, FnsToEvaluateParamNames, [],[],[],1000);
+EarningsParetoCoeff=1/((log(LorenzCurves(1,990))/log(LorenzCurves(1,999)))/log(10)); %(1+1/EarningsGini)/2;
+IncomeParetoCoeff=1/((log(LorenzCurves(2,990))/log(LorenzCurves(2,999)))/log(10)); %(1+1/IncomeGini)/2;
+WealthParetoCoeff=1/((log(LorenzCurves(3,990))/log(LorenzCurves(3,999)))/log(10)); %(1+1/WealthGini)/2;
+
+
+%% Display some output about the solution
+
+figure(3)
+plot(a_grid,cumsum(sum(StationaryDist.ptweights(1)*StationaryDist.impatient,2)+sum(StationaryDist.ptweights(2)*StationaryDist.patient,2))) %Plot the asset cdf
+title('Cumulative distribution of asset holdings')
+
+fprintf('For parameter values sigma=%.2f, mu=%.2f, rho=%.2f \n', [Params.sigma,Params.mu,Params.rho])
+
+fprintf('The equilibrium value of the interest rate is r=%.4f \n', p_eqm.r*100)
+fprintf('The equilibrium value of the aggregate savings rate is s=%.4f \n', aggsavingsrate)
+%fprintf('Time required to find the eqm was %.4f seconds \n',findeqmtime)
+
+
+##### SOURCE END #####
+--></body></html>
