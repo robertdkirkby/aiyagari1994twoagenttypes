@@ -81,7 +81,7 @@ Params.sigma=0.2; % Std dev. of shocks to z
 %Set initial value for interest rates (Aiyagari proves that with idiosyncratic
 %uncertainty, the eqm interest rate is limited above by it's steady state value
 %without idiosyncratic uncertainty, that is that r<r_ss).
-Params.r=0.04;
+Params.r=0.02;
 
 Params.q=3; %Footnote 33 of Aiyagari(1993WP, pg 25) implicitly says that he uses q=3
 
@@ -96,7 +96,7 @@ l_grid=l_grid./Expectation_l;
 %% Grids
 
 % In the absence of idiosyncratic risk, the steady state equilibrium is given by
-r_ss=1/Params.beta.impatient-1;
+r_ss=1/Params.beta.patient-1;
 K_ss=((r_ss+Params.delta)/Params.alpha)^(1/(Params.alpha-1)); %The steady state capital in the absence of aggregate uncertainty.
 Params.kmax=15*K_ss;
 
