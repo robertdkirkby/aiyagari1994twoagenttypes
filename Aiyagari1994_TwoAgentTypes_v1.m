@@ -103,45 +103,46 @@ n_p=n_r;
 %% Solving the value function problem
 DiscountFactorParamNames={'beta'};
 
-ReturnFn=@(aprime_val, a_val, z_val,alpha,delta,mu,r) Aiyagari1994_ReturnFn(aprime_val, a_val, z_val,alpha,delta,mu,r);
-ReturnFnParamNames={'alpha','delta','mu','r'}; %It is important that these are in same order as they appear in 'Aiyagari1994_ReturnFn'
+ReturnFn=@(aprime, a, z,alpha,delta,mu,r) Aiyagari1994_ReturnFn(aprime, a, z,alpha,delta,mu,r);
 
 % Following lines are used to test that we are setting things up correctly, but is not needed at this stage.
 vfoptions.verbose=1;
 disp('Test ValueFnIter')
 tic;
-[V, Policy]=ValueFnIter_PType(n_d,n_a,n_z,[],N_i,d_grid, a_grid, z_grid, pi_z, [], [], ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, [], vfoptions); % The unused inputs related to the possibility that some agents are what VFI Toolkit calls 'Case2' (following nomenclature of SLP1989)
+[V, Policy]=ValueFnIter_Case1_PType(n_d,n_a,n_z,N_i,d_grid, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, vfoptions);
 toc
+vfoptions.verbose=0;
+
 
 % Graph the two different value functions and the two different policy functions.
 % Note that these are the example/test ones, not the ones in equilibrium.
 figure(1)
-subplot(2,2,1); surf(V.pt1)
+subplot(2,2,1); surf(V.ptype001)
 title('Value fn: Type 1, low beta')
-subplot(2,2,2); surf(V.pt2)
+subplot(2,2,2); surf(V.ptype002)
 title('Value fn: Type 2, high beta')
-subplot(2,2,3); surf(a_grid(shiftdim(Policy.pt1,1)))
+subplot(2,2,3); surf(a_grid(shiftdim(Policy.ptype001,1)))
 title('Policy fn (next period assets): Type 1, low beta')
-subplot(2,2,4); surf(a_grid(shiftdim(Policy.pt2,1)))
+subplot(2,2,4); surf(a_grid(shiftdim(Policy.ptype002,1)))
 title('Policy fn (next period assets): Type 2, high beta')
 
 %% Solving for the stationary distribution
 Params.PTypeWeights=[0.6; 0.4]; % Make 60% of agents the 'low beta' type and 40% the 'high beta' type.
-PTypeDistNames={'PTypeWeights'};
+PTypeDistParamNames={'PTypeWeights'};
 
 % Following lines are used to test that we are setting things up correctly, but is not needed at this stage.
 simoptions=struct();
 disp('Test StationaryDist')
 tic;
-StationaryDist=StationaryDist_PType([],[],Policy,n_d,n_a,n_z,[],N_i,d_grid, a_grid, z_grid,pi_z,[],[],Params,[],PTypeDistNames,simoptions);
+StationaryDist=StationaryDist_Case1_PType(PTypeDistParamNames,Policy,n_d,n_a,n_z,N_i,pi_z,Params,simoptions);
 toc
 
 % Graph the cumulative distribution function over asset holdings.
 % Note that these are the example/test ones, not the ones in equilibrium.
 figure(2)
-plot(a_grid,cumsum(sum(StationaryDist.pt1,2))*StationaryDist.ptweights(1))
+plot(a_grid,cumsum(sum(StationaryDist.ptype001,2))*StationaryDist.ptweights(1))
 hold on
-plot(a_grid,cumsum(sum(StationaryDist.pt2,2))*StationaryDist.ptweights(2))
+plot(a_grid,cumsum(sum(StationaryDist.ptype002,2))*StationaryDist.ptweights(2))
 hold off
 legend('Type 1: Low beta', 'Type 2: High beta')
 title('Agent Stationary Distribution: cdfs by type')
@@ -150,13 +151,10 @@ title('Agent Stationary Distribution: cdfs by type')
 
 % Create descriptions of aggregate values as functions of d_grid, a_grid, z_grid 
 % (used to calculate the integral across the stationary dist fn of whatever functions you define here)
-FnsToEvaluateParamNames.Names={};
-FnsToEvaluate_1 = @(aprime,a,z) a; %We just want the aggregate assets (which is this periods state)
-% Note that by default this will be evaluated for all types of agents.
-FnsToEvaluate={FnsToEvaluate_1};
+FnsToEvaluate.K = @(aprime,a,z) a; %We just want the aggregate assets (which is this periods state)
 
 % Following line could be used to test that we are setting things up correctly, but is not needed at this stage.
-AggVars=EvalFnOnAgentDist_AggVars_PType(StationaryDist, Policy,n_d,n_a,n_z,[],N_i,d_grid, a_grid, z_grid,[], FnsToEvaluate, Params, FnsToEvaluateParamNames, [], []);
+AggVars=EvalFnOnAgentDist_AggVars_Case1_PType(StationaryDist, Policy, FnsToEvaluate, Params,n_d,n_a,n_z,N_i,d_grid, a_grid, z_grid, simoptions);
 
 %Now define the functions for the General Equilibrium conditions
     %Should be written as LHS of general equilibrium eqn minus RHS, so that 
@@ -164,15 +162,13 @@ AggVars=EvalFnOnAgentDist_AggVars_PType(StationaryDist, Policy,n_d,n_a,n_z,[],N_
     %the general equilibrium condition is to holding.
 % Note AggVars contains the expected values over the stationary agent
 % distribution of the FnsToEvaluate
-GeneralEqmEqnsParamNames(1).Names={'alpha','delta'};
-GeneralEqmEqn_1 = @(AggVars,GEprices,alpha,delta) GEprices-(alpha*(AggVars^(alpha-1))*(Expectation_l^(1-alpha))-delta); %The requirement that the interest rate corresponds to the agg capital level
-GeneralEqmEqns={GeneralEqmEqn_1};
+GeneralEqmEqns.capitalmarket = @(r,K,alpha,delta) r-(alpha*(K^(alpha-1))*(Expectation_l^(1-alpha))-delta); %The requirement that the interest rate corresponds to the agg capital level
 
 %Use the toolkit to find the equilibrium price index
 GEPriceParamNames={'r'};
 heteroagentoptions.verbose=1;
 disp('Calculating price vector corresponding to the stationary eqm')
-[p_eqm,p_eqm_index,GeneralEqmConditions]=HeteroAgentStationaryEqm_PType(n_d, n_a, n_z, [], N_i, 0, pi_z, d_grid, a_grid, z_grid,[], [], [], ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, ReturnFnParamNames, [], [], PTypeDistNames, FnsToEvaluateParamNames, GeneralEqmEqnsParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
+[p_eqm,p_eqm_index,GeneralEqmConditions]=HeteroAgentStationaryEqm_Case1_PType(n_d, n_a, n_z, N_i, n_p, pi_z, d_grid, a_grid, z_grid, ReturnFn, FnsToEvaluate, GeneralEqmEqns, Params, DiscountFactorParamNames, PTypeDistParamNames, GEPriceParamNames,heteroagentoptions, simoptions, vfoptions);
 
 % The three output are the general equilibrium price, the index for the
 % price in the price grid (that option is unused here), and the value of
@@ -187,15 +183,15 @@ Params.w=(1-Params.alpha)*((p_eqm.r+Params.delta)/Params.alpha)^(Params.alpha/(P
 
 disp('Calculating various equilibrium objects')
 Params.r=p_eqm.r;
-[V, Policy]=ValueFnIter_PType(n_d,n_a,n_z,[],N_i,d_grid, a_grid, z_grid, pi_z, [], [], ReturnFn, Params, DiscountFactorParamNames, ReturnFnParamNames, [], vfoptions); % The unused inputs related to the possibility that some agents are what VFI Toolkit calls 'Case2' (following nomenclature of SLP1989)
+[V, Policy]=ValueFnIter_Case1_PType(n_d,n_a,n_z,N_i,d_grid, a_grid, z_grid, pi_z, ReturnFn, Params, DiscountFactorParamNames, vfoptions);
 
 % By default Policy contains the indexes corresponding to the optimal
 % policy. Can get the policy values using vfoptions.polindorval=1 or,
 % PolicyValues=PolicyInd2Val_Case1(Policy,n_d,n_a,n_z,d_grid,a_grid, Parallel);
 
-StationaryDist=StationaryDist_PType([],[],Policy,n_d,n_a,n_z,[],N_i,d_grid, a_grid, z_grid,pi_z,[],[],Params,[],PTypeDistNames,simoptions);
+StationaryDist=StationaryDist_Case1_PType(PTypeDistParamNames,Policy,n_d,n_a,n_z,N_i,pi_z,Params,simoptions);
 
-AggregateVars=EvalFnOnAgentDist_AggVars_PType(StationaryDist, Policy,n_d,n_a,n_z,[],N_i,d_grid, a_grid, z_grid,[], FnsToEvaluate, Params, FnsToEvaluateParamNames, [], []);
+AggVars=EvalFnOnAgentDist_AllStats_Case1_PType(StationaryDist, Policy, FnsToEvaluate, Params,n_d,n_a,n_z,N_i,d_grid, a_grid, z_grid, simoptions);
 
 % Calculate savings rate:
 % We know production is Y=K^{\alpha}L^{1-\alpha}, and that L=1
@@ -203,38 +199,33 @@ AggregateVars=EvalFnOnAgentDist_AggVars_PType(StationaryDist, Policy,n_d,n_a,n_z
 % In equilibrium K is constant, so aggregate savings is just depreciation, which
 % equals delta*K. The agg savings rate is thus delta*K/Y.
 % So agg savings rate is given by s=delta*K/(K^{\alpha})=delta*K^{1-\alpha}
-aggsavingsrate=Params.delta*AggregateVars^(1-Params.alpha);
+aggsavingsrate=Params.delta*AggVars.K.Mean^(1-Params.alpha);
 
 % Calculate Lorenz curves, Gini coefficients, and Pareto tail coefficients
-%  @(d_val,aprime_val,a_val,s_val,pi_z,p_val,param)
-FnsToEvaluateParamNames(1).Names={'w'};
-FnsToEvaluate_Earnings = @(aprime_val,a_val,z_val,w) w*z_val;
-FnsToEvaluateParamNames(2).Names={'w','r'};
-FnsToEvaluate_Income = @(aprime_val,a_val,z_val,w,r) w*z_val+(1+r)*a_val;
-FnsToEvaluateParamNames(3).Names={};
-FnsToEvaluate_Wealth = @(aprime_val,a_val,z_val) a_val;
-FnsToEvaluateIneq={FnsToEvaluate_Earnings, FnsToEvaluate_Income, FnsToEvaluate_Wealth};
-LorenzCurves=EvalFnOnAgentDist_LorenzCurve_PType(StationaryDist, Policy,n_d,n_a,n_z,[],N_i,d_grid, a_grid, z_grid,[], FnsToEvaluateIneq, Params, FnsToEvaluateParamNames);
+FnsToEvaluateIneq.Earnings = @(aprime,a,z,w) w*z;
+FnsToEvaluateIneq.Income = @(aprime,a,z,w,r) w*z+(1+r)*a;
+FnsToEvaluateIneq.Wealth = @(aprime,a,z) a;
+simoptions.npoints=1000; % Use 1000 points for Lorenz Curves (default is 100)
+AllStats=EvalFnOnAgentDist_AllStats_Case1_PType(StationaryDist, Policy, FnsToEvaluateIneq, Params,n_d,n_a,n_z,N_i,d_grid, a_grid, z_grid, simoptions);
 
 % 3.5 The Distributions of Earnings and Wealth
 %  Gini for Earnings
-EarningsGini=Gini_from_LorenzCurve(LorenzCurves(1,:));
-IncomeGini=Gini_from_LorenzCurve(LorenzCurves(2,:));
-WealthGini=Gini_from_LorenzCurve(LorenzCurves(3,:));
+AllStats.Earnings.Gini
+AllStats.Income.Gini
+AllStats.Wealth.Gini
 
 % Calculate inverted Pareto coeff, b, from the top income shares as b=1/[log(S1%/S0.1%)/log(10)] (formula taken from Excel download of WTID database)
 % No longer used: Calculate Pareto coeff from Gini as alpha=(1+1/G)/2; ( http://en.wikipedia.org/wiki/Pareto_distribution#Lorenz_curve_and_Gini_coefficient)
 % Recalculte Lorenz curves, now with 1000 points
-LorenzCurves=EvalFnOnAgentDist_LorenzCurve_PType(StationaryDist, Policy,n_d,n_a,n_z,[],N_i,d_grid, a_grid, z_grid,[], FnsToEvaluateIneq, Params, FnsToEvaluateParamNames, [],[],[],1000);
-EarningsParetoCoeff=1/((log(LorenzCurves(1,990))/log(LorenzCurves(1,999)))/log(10)); %(1+1/EarningsGini)/2;
-IncomeParetoCoeff=1/((log(LorenzCurves(2,990))/log(LorenzCurves(2,999)))/log(10)); %(1+1/IncomeGini)/2;
-WealthParetoCoeff=1/((log(LorenzCurves(3,990))/log(LorenzCurves(3,999)))/log(10)); %(1+1/WealthGini)/2;
+EarningsParetoCoeff=1/((log(AllStats.Earnings.LorenzCurve(990))/log(AllStats.Earnings.LorenzCurve(999)))/log(10)); %(1+1/EarningsGini)/2;
+IncomeParetoCoeff=1/((log(AllStats.Income.LorenzCurve(990))/log(AllStats.Income.LorenzCurve(999)))/log(10)); %(1+1/IncomeGini)/2;
+WealthParetoCoeff=1/((log(AllStats.Wealth.LorenzCurve(990))/log(AllStats.Wealth.LorenzCurve(999)))/log(10)); %(1+1/WealthGini)/2;
 
 
 %% Display some output about the solution
 
 figure(3)
-plot(a_grid,cumsum(sum(StationaryDist.ptweights(1)*StationaryDist.pt1,2)+sum(StationaryDist.ptweights(2)*StationaryDist.pt2,2))) %Plot the asset cdf
+plot(a_grid,cumsum(sum(StationaryDist.ptweights(1)*StationaryDist.ptype001,2)+sum(StationaryDist.ptweights(2)*StationaryDist.ptype002,2))) %Plot the asset cdf
 title('Cumulative distribution of asset holdings')
 
 fprintf('For parameter values sigma=%.2f, mu=%.2f, rho=%.2f \n', [Params.sigma,Params.mu,Params.rho])
