@@ -14,10 +14,6 @@
 % the capital-share of income, the rate of diminishing returns to capital, and has an important role in determining
 %  the capital-output ratio
 
-%% TESTING
-% Params.PTypeWeights=[1; 0]; %
-% Params.beta=[0.96; 0.96]; % NO ACTUAL DIFFERENCE, JUST USED FOR TESTING
-
 
 %% Different permanent types of agents
 N_i=2; % There are two permanent types of agents.
@@ -25,15 +21,14 @@ N_i=2; % There are two permanent types of agents.
 % Other than this the only notable changes are that this information needs
 % to be passed as an additional input to a number of the VFI Toolkit commands.
 
-%% Set some basic variables
-
-n_k=2^9; %2^9;
+%% How many points to use for grids
+n_k=2^10; %2^9;
 n_z=21;
 
 %% Parameters
 % Our two permanent types of agents differ in their values of beta. In v1
 % of this we set this up using a column vector on beta. [You cannot set this as a row vector.]
-Params.beta=[0.94; 0.98]; % Discount factor.
+Params.beta=[0.92; 0.96]; % Discount factor.
 
 %Parameters
 Params.alpha=0.36; % This is actually redundant as declare this below when looking at initial and final eqm
@@ -139,6 +134,14 @@ StationaryDist_init=StationaryDist_Case1_PType(PTypeDistParamNames,Policy_init,n
 % Following line is just a check
 AggVars_init=EvalFnOnAgentDist_AggVars_Case1_PType(StationaryDist_init, Policy_init, FnsToEvaluate, Params, n_d, n_a, n_z, N_i, d_grid, a_grid, z_grid, simoptions);
 
+% Take a look to see asset grid is okay
+figure(1)
+subplot(2,1,1); plot(a_grid,cumsum(sum(StationaryDist_init.ptype001,2),1))
+hold on
+plot(a_grid,cumsum(sum(StationaryDist_init.ptype002,2),1))
+hold off
+title('init dist')
+
 %% Compute the final general equilbrium
 Params.r=0.038; % Initial guess
 Params.alpha=0.4;
@@ -157,6 +160,15 @@ Params.r=p_eqm_final.r;
 
 StationaryDist_final=StationaryDist_Case1_PType(PTypeDistParamNames,Policy_final,n_d,n_a,n_z,N_i,pi_z,Params,simoptions);
 AggVars_final=EvalFnOnAgentDist_AggVars_Case1_PType(StationaryDist_final, Policy_final, FnsToEvaluate, Params, n_d, n_a, n_z, N_i, d_grid, a_grid, z_grid, simoptions);
+
+% Take a look to see asset grid is okay
+figure(1)
+subplot(2,1,2); plot(a_grid,cumsum(sum(StationaryDist_final.ptype001,2),1))
+hold on
+plot(a_grid,cumsum(sum(StationaryDist_final.ptype002,2),1))
+hold off
+title('final dist')
+
 
 %% Compute the transition path
 % For this we need the following extra objects: PricePathOld, PriceParamNames, ParamPath, ParamPathNames, T, V_final, StationaryDist_init
@@ -194,11 +206,13 @@ transpathoptions.graphpricepath=1;
 % Now just run the TransitionPath_Case1 command (all of the other inputs are things we had already had to define to be able to solve for the initial and final equilibria)
 transpathoptions.verbose=1;
 
-% vfoptions.divideandconquer=1; % faster, but requires that aprime is a monotone function of a (conditional on d,z)
-% vfoptions.level1n=11;
+% We can use divide-and-conquer to solve the transition path faster
+vfoptions.divideandconquer=1; % faster, but requires that aprime is a monotone function of a (conditional on d,z)
+vfoptions.level1n=11;
+
 PricePath=TransitionPath_Case1_PType(PricePath0, ParamPath, T, V_final, StationaryDist_init, n_d, n_a, n_z, N_i, d_grid,a_grid,z_grid, pi_z, ReturnFn, FnsToEvaluate, TransPathGeneralEqmEqns, Params, DiscountFactorParamNames, transpathoptions, simoptions, vfoptions);
 
-figure(1)
+figure(2)
 plot(0:1:T, [p_eqm_init.r;PricePath.r])
 title('interest rate path for transition')
 
@@ -210,10 +224,9 @@ AgentDistPath=AgentDistOnTransPath_Case1_PType(StationaryDist_init,PricePath0, P
 
 AggVarsPath=EvalFnOnTransPath_AggVars_Case1_PType(FnsToEvaluate, PricePath0, ParamPath, Params, T, PolicyPath, AgentDistPath, n_d, n_a, n_z, N_i, pi_z, d_grid, a_grid,z_grid, simoptions);
 
-figure(2)
+figure(3)
 plot(0:1:T, [AggVars_init.K.Mean; AggVarsPath.K.Mean])
 title('path of aggregate physical capital for transition')
-
 
 
 
